@@ -1,0 +1,252 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <title>Govt Job Form Filler by AI</title>
+  <!-- Note: You must download pdf.min.js and pdf.worker.min.js to your folder for this to work -->
+  <script src="pdf.min.js"></script>
+  <style>
+    *{box-sizing:border-box;margin:0;padding:0}
+    body{font-family:'Segoe UI',sans-serif;width:440px;background:#0f0f1a;color:#e2e8f0;min-height:520px}
+
+    /* Header */
+    .hdr{background:linear-gradient(135deg,#dc2626,#b91c1c);padding:14px 18px;display:flex;align-items:center;justify-content:space-between}
+    .hdr-left{display:flex;align-items:center;gap:10px}
+    .hdr-icon{font-size:22px}
+    .hdr h1{font-size:15px;font-weight:700;color:#fff}
+    .hdr p{font-size:11px;color:rgba(255,255,255,.7);margin-top:2px}
+
+    /* Tabs */
+    .tabs{display:flex;background:#1a1a2e;border-bottom:1px solid #2d2d4e}
+    .tab{flex:1;padding:10px;text-align:center;font-size:12px;font-weight:600;cursor:pointer;color:#64748b;border-bottom:2px solid transparent;transition:.2s}
+    .tab.active{color:#dc2626;border-bottom-color:#dc2626;background:#0f0f1a}
+    .tab:hover:not(.active){color:#aaa}
+
+    /* Panel */
+    .panel{display:none;padding:15px}
+    .panel.active{display:block}
+
+    /* Form elements */
+    label{display:block;font-size:11px;font-weight:600;color:#94a3b8;margin-bottom:4px;text-transform:uppercase;letter-spacing:.4px}
+    input,select,textarea{width:100%;background:#1e1e35;border:1px solid #2d2d4e;border-radius:7px;padding:9px 11px;font-size:13px;color:#e2e8f0;outline:none;transition:border-color .2s;font-family:inherit}
+    input:focus,select:focus,textarea:focus{border-color:#dc2626}
+    textarea{resize:vertical;min-height:72px}
+    .form-group{margin-bottom:13px}
+    .row{display:flex;gap:8px}
+    .row>*{flex:1}
+
+    /* Buttons */
+    .btn{width:100%;padding:10px;border:none;border-radius:8px;font-size:13px;font-weight:700;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:6px;transition:.2s}
+    .btn:hover{opacity:.88;transform:translateY(-1px)}
+    .btn-red{background:linear-gradient(135deg,#dc2626,#b91c1c);color:#fff}
+    .btn-green{background:linear-gradient(135deg,#16a34a,#15803d);color:#fff}
+    .btn-outline{background:transparent;border:1px solid #3d3d5e;color:#94a3b8}
+    .btn-outline:hover{border-color:#dc2626;color:#dc2626}
+    .btn-sm{padding:6px 12px;font-size:12px;width:auto}
+    .btn-row{display:flex;gap:8px;margin-top:10px}
+    .btn-row .btn{flex:1}
+
+    /* Status */
+    .badge{display:inline-flex;align-items:center;gap:5px;padding:3px 9px;border-radius:20px;font-size:11px;font-weight:600}
+    .badge-ok{background:#052e16;color:#4ade80}
+    .badge-err{background:#450a0a;color:#f87171}
+    .badge-warn{background:#1c1917;color:#fbbf24}
+    .badge-blue{background:#0c1a3a;color:#60a5fa}
+
+    /* Question list */
+    .q-list{background:#1a1a2e;border:1px solid #2d2d4e;border-radius:9px;max-height:190px;overflow-y:auto;margin:10px 0}
+    .q-item{display:flex;align-items:center;gap:8px;padding:8px 11px;border-bottom:1px solid #2d2d4e;font-size:12px;cursor:pointer;transition:.15s}
+    .q-item:last-child{border-bottom:none}
+    .q-item:hover{background:#1e1e35}
+    .q-item.active-q{background:#1e0a0a;border-left:3px solid #dc2626}
+    .q-dot{width:8px;height:8px;border-radius:50%;background:#475569;flex-shrink:0}
+    .q-dot.done{background:#22c55e}
+    .q-dot.active{background:#dc2626;animation:pulse 1s infinite}
+    .q-dot.fail{background:#f87171}
+    @keyframes pulse{0%,100%{opacity:1}50%{opacity:.4}}
+    .q-text{flex:1;color:#cbd5e1;line-height:1.4}
+    .q-status{font-size:10px;color:#64748b;flex-shrink:0}
+
+    /* Progress */
+    .prog-wrap{margin:8px 0}
+    .prog-row{display:flex;justify-content:space-between;margin-bottom:4px}
+    .prog-bar{background:#2d2d4e;border-radius:20px;height:7px;overflow:hidden}
+    .prog-fill{height:100%;background:linear-gradient(90deg,#dc2626,#ef4444);border-radius:20px;transition:width .4s}
+
+    /* Log */
+    .log{background:#0a0a15;border:1px solid #1e1e35;border-radius:7px;padding:9px;font-size:11px;font-family:monospace;max-height:120px;overflow-y:auto;color:#475569;margin-top:8px}
+    .log .ok{color:#4ade80}
+    .log .err{color:#f87171}
+    .log .info{color:#60a5fa}
+    .log .warn{color:#fbbf24}
+
+    /* API key row */
+    .key-row{display:flex;gap:7px}
+    .key-row input{flex:1}
+    .eye-btn{background:#2d2d4e;border:1px solid #3d3d5e;border-radius:7px;color:#94a3b8;padding:0 10px;cursor:pointer;font-size:14px}
+
+    /* Divider */
+    hr{border:none;border-top:1px solid #2d2d4e;margin:13px 0}
+    .small{font-size:11px;color:#475569;line-height:1.5}
+    .flex{display:flex;justify-content:space-between;align-items:center}
+
+    /* Scrollbar */
+    ::-webkit-scrollbar{width:4px}
+    ::-webkit-scrollbar-thumb{background:#2d2d4e;border-radius:4px}
+
+    .spin{width:13px;height:13px;border:2px solid rgba(255,255,255,.3);border-top-color:#fff;border-radius:50%;animation:rot .7s linear infinite;display:inline-block}
+    @keyframes rot{to{transform:rotate(360deg)}}
+    .hidden{display:none!important}
+    .mt8{margin-top:8px}
+    .mt12{margin-top:12px}
+  </style>
+</head>
+<body>
+
+<div class="hdr">
+  <div class="hdr-left">
+    <div class="hdr-icon">🤖</div>
+    <div>
+      <h1>Govt Job Form Filler by AI</h1>
+      <p>Clicks every nav question & selects answers automatically</p>
+    </div>
+  </div>
+  <button class="btn btn-outline btn-sm" id="hdr-profiles-btn" style="width:auto;padding:5px 8px;font-size:11px;background:#1a1a2e;color:#fff;border-color:#3d3d5e">👥 Profiles</button>
+</div>
+
+<div class="tabs">
+  <div class="tab active" data-tab="auto">⚡ Auto Answer</div>
+  <div class="tab" data-tab="settings">⚙️ API Settings</div>
+</div>
+
+<!-- ══ AUTO TAB ══ -->
+<div class="panel active" id="panel-auto">
+
+  <div class="flex" style="margin-bottom:10px">
+    <span style="font-size:11px;color:#64748b">API:</span>
+    <span class="badge badge-warn" id="api-badge">⚠ Not set</span>
+  </div>
+
+  <!-- Scan -->
+  <button class="btn btn-outline" id="scan-btn">🔍 Scan — Find All Nav Questions</button>
+
+  <!-- Question list -->
+  <div id="q-section" class="hidden">
+    <div class="flex mt8">
+      <span style="font-size:12px;font-weight:600;color:#94a3b8">Questions Found</span>
+      <span class="badge badge-blue" id="q-total">0</span>
+    </div>
+    <div class="q-list" id="q-list"></div>
+  </div>
+
+  <!-- Progress -->
+  <div id="prog-section" class="hidden">
+    <div class="prog-row">
+      <span style="font-size:11px;color:#94a3b8">Progress</span>
+      <span style="font-size:11px;color:#94a3b8" id="prog-text">0 / 0</span>
+    </div>
+    <div class="prog-bar"><div class="prog-fill" id="prog-fill" style="width:0%"></div></div>
+  </div>
+
+  <!-- Action buttons -->
+  <div class="btn-row mt12">
+    <button class="btn btn-red" id="run-btn">⚡ Auto Answer All Questions</button>
+    <button class="btn btn-outline btn-sm hidden" id="stop-btn">⛔</button>
+  </div>
+
+  <div class="log" id="log"><span class="info">Ready. Scan the page first to detect questions.</span></div>
+</div>
+
+<!-- ══ SETTINGS TAB ══ -->
+<div class="panel" id="panel-settings">
+
+  <div class="form-group">
+    <label>Mobile Number (Profile ID)</label>
+    <input type="text" id="mobile-id" placeholder="e.g. 017XXXXXXXX (Load/Save by number)"/>
+  </div>
+
+  <div class="form-group">
+    <label>Your Profile (AI reads this to pick answers)</label>
+    <textarea id="profile" placeholder="Example: I am a 32-year-old male working at a company with 51-100 employees. My household income is $75,000-$100,000. I am married with 2 kids aged 5 and 8. I have a bachelor's degree. I don't smoke, drink alcohol socially on weekends..."></textarea>
+    
+    <div class="form-group mt8" style="margin-bottom:0;">
+      <label>Upload CV (TXT, JSON, or PDF data)</label>
+      <div style="display:flex; gap:4px;">
+        <input type="file" id="cv-upload" accept=".txt,.json,.pdf" style="padding: 4px; font-size: 11px; background: #1a1a2e; flex: 1;" />
+        <button class="btn btn-outline btn-sm" id="process-cv-btn" style="width:auto; padding: 0 8px;">Upload</button>
+        <button class="btn btn-outline btn-sm" id="copy-prompt-btn" style="width:auto; padding: 0 8px;" title="Copy prompt for manual AI extraction">📋 Copy Prompt</button>
+      </div>
+    </div>
+
+    <div class="btn-row mt8">
+      <button class="btn btn-outline btn-sm" id="save-profile-btn">💾 Save Profile</button>
+      <button class="btn btn-outline btn-sm" id="import-btn">📥 Import</button>
+      <button class="btn btn-outline btn-sm" id="export-btn">📤 Export</button>
+      <input type="file" id="import-file" class="hidden" accept=".json"/>
+    </div>
+  </div>
+
+  <div class="form-group">
+    <label>OpenAI API Key</label>
+    <div class="key-row">
+      <input type="password" id="api-key" placeholder="sk-..."/>
+      <button class="eye-btn" id="eye-btn">👁</button>
+    </div>
+  </div>
+
+  <div class="row">
+    <div class="form-group">
+      <label>Model</label>
+      <select id="model">
+        <option value="o4-mini">GPT-4o Mini ⚡ (fast)</option>
+        <option value="o4-mini">GPT-4o 🧠 (best)</option>
+        <option value="o4-mini">GPT-3.5 Turbo 💰</option>
+      </select>
+    </div>
+    <div class="form-group">
+      <label>Delay (ms)</label>
+      <input type="text" id="delay" value="900" placeholder="900"/>
+    </div>
+  </div>
+
+  <div class="form-group">
+    <label>Auto-click Submit after each question?</label>
+    <select id="auto-submit">
+      <option value="true">✅ Yes — click Submit automatically</option>
+      <option value="false">❌ No — only select the answer</option>
+    </select>
+  </div>
+
+  <hr/>
+  <button class="btn btn-red" id="save-btn">💾 Save Settings</button>
+  <button class="btn btn-outline mt8" id="test-btn">🧪 Test API Key</button>
+  <div id="settings-msg" class="mt8"></div>
+  <hr/>
+  <p class="small">Your API key is saved only in Chrome's local storage on your device. It is sent only to OpenAI's servers to process answers.</p>
+</div>
+
+<!-- ══ PROFILES TAB ══ -->
+<div class="panel" id="panel-profiles">
+  <div class="flex" style="margin-bottom:10px">
+    <span style="font-size:12px;font-weight:600;color:#94a3b8">Saved Profiles <span class="badge badge-blue" id="profile-count">0</span></span>
+  </div>
+  
+  <div class="btn-row" style="margin-bottom: 10px;">
+    <button class="btn btn-outline btn-sm" id="prof-import-btn">📥 Import</button>
+    <button class="btn btn-outline btn-sm" id="prof-export-btn">📤 Export Selected</button>
+    <input type="file" id="prof-import-file" class="hidden" accept=".json"/>
+  </div>
+  <div style="margin-bottom: 8px; font-size: 12px; color: #cbd5e1; display: flex; align-items: center; gap: 6px;">
+    <input type="checkbox" id="select-all-profiles" style="width:14px;height:14px;margin:0" />
+    <label for="select-all-profiles" style="margin: 0; color: #cbd5e1; cursor:pointer; text-transform:none; letter-spacing:0">Select All Profiles</label>
+  </div>
+
+  <div class="q-list" id="profiles-list" style="max-height:280px; overflow-y:auto;">
+    <!-- List injected here -->
+  </div>
+  <div id="profiles-msg" class="mt8"></div>
+</div>
+
+<script src="popup.js"></script>
+</body>
+</html>
